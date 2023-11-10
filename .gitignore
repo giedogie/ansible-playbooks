@@ -1,0 +1,9 @@
+ansible.log
+ansible.cfg
+inventory
+roles/basic-setup/files/
+roles/calibre-update-ebook/files
+roles/k8s-master/files/
+roles/k8s-worker/files/
+roles/new_servers/files/
+roles/sync-thing/files

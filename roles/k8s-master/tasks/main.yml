@@ -1,0 +1,82 @@
+- name: create an empty file for Kubeadm configuring
+  copy:
+    content: ""
+    dest: /etc/kubernetes/kubeadm-config.yaml
+    force: no
+
+- name: configuring the container runtime including its cgroup driver
+  blockinfile:
+    path: /etc/kubernetes/kubeadm-config.yaml
+    block: |
+         kind: ClusterConfiguration
+         apiVersion: kubeadm.k8s.io/v1beta3
+         kubernetesVersion: v1.28.2
+         controlPlaneEndpoint: 10.0.0.10:6443
+         networking:
+           serviceSubnet: "10.96.0.0/16"
+           podSubnet: "10.244.0.0/16"
+           dnsDomain: "cluster.local"
+         controllerManager:
+           extraArgs:
+             "node-cidr-mask-size": "24"
+         apiServer:
+           extraArgs:
+             authorization-mode: "Node,RBAC"
+           certSANs:
+             - "10.0.0.10"
+             - "kubemaster"
+             - "kubernetes"
+         ---    
+         kind: KubeletConfiguration
+         apiVersion: kubelet.config.k8s.io/v1beta1
+         cgroupDriver: systemd
+         serverTLSBootstrap: true
+
+#- name: initialize the cluster (this could take some time)
+#  shell: kubeadm init --config /etc/kubernetes/kubeadm-config.yaml >> cluster-init.log
+#  become: true
+   
+
+- name: create .kube directory
+  become: yes
+  become_user: admin
+  file:
+    path: $HOME/.kube
+    state: directory
+    mode: 0755
+
+- name: copy admin.conf to user's kube config
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/admin/.kube/config
+    remote_src: yes
+    owner: neon
+    group: neon
+    mode: '0600'
+
+- name: install Pod network
+  become: yes
+  become_user: admin
+  shell: kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml >> pod_network_setup.log
+
+- name: copy Helm binary
+  become: true
+  copy:
+    src: helm
+    dest: /usr/local/bin/bin/helm
+    owner: admin  
+    group: admin
+    mode: 644
+
+- name: Get the token for joining the worker nodes
+  become: true
+  become_user: admin
+  shell: kubeadm token create  --print-join-command > join-command
+  register: k8s_join_command
+
+- name: copy join command
+  fetch:
+    src: /home/admin/join-command
+    dest: /home/admin/ansible/roles/k8s-worker/files/join-command
+    owner: neon
+    flat: yes

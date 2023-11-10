@@ -1,0 +1,16 @@
+
+- name: copy join command to remote
+  copy:
+    src: join-command
+    dest: /home/admin/join-command
+    
+- name: Copy join command from Ansiblehost to the worker nodes.
+  become: yes
+  copy:
+    src: join-command
+    dest: join-command
+    mode: 0777
+
+- name: Join the Worker nodes to the cluster.
+  become: yes
+  command: sh join-command >> join.log 

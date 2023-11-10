@@ -1,0 +1,186 @@
+---
+ 
+  #------UPDATE AND UPGRADE--------
+  
+  - name: install updates (Alma)
+    tags: always
+    dnf:
+      update_only: yes
+      update_cache: yes
+    when: ansible_distribution == "AlmaLinux"
+
+  - name: install updates (Ubuntu)
+    tags: always
+    apt:
+      upgrade: dist
+      update_cache: yes
+    when: ansible_distribution == "Ubuntu"
+
+   #------CHANGE TIME ZONE--------  
+
+  - name: Ubuntu TZ
+    when: ansible_distribution == 'Ubuntu'
+    command: timedatectl set-timezone Europe/Warsaw
+
+  - name: RHEL TZ
+    when: ansible_distribution == 'AlmaLinux'
+    command: timedatectl set-timezone Europe/Warsaw
+
+ 
+
+    
+#------INSTALL TOOLS UBUNTU--------
+  
+  - name: install mc (Ubuntu)
+    tags: always
+    apt:
+      name: mc
+      state: present
+    when: ansible_distribution == "Ubuntu"
+    
+  - name: install docker (Ubuntu)
+    tags: always
+    apt:
+      name: docker.io
+      state: present
+    when: ansible_distribution == "Ubuntu"
+    
+  - name: install net-tools (Ubuntu)
+    tags: always
+    apt:
+      name: net-tools
+      state: present
+    when: ansible_distribution == "Ubuntu"	
+
+#------SSHD BACKUP AND COPY NEW CONFIG UBUNTU--------
+
+  - name: copy new sshd config file (Ubuntu)
+    copy:
+      src: sshd_config
+      dest: /etc/ssh/sshd_config
+      owner: root
+      group: root
+      mode: 644
+    register: sshd
+    when: ansible_distribution == "Ubuntu"
+
+  - name: restart ssh to apply changes (Ubuntu)
+    command:
+      cmd: systemctl restart ssh.service 
+    when: sshd.changed
+ 
+ #------ADD RULES TO FIREWALL AND BRING IT UP UBUNTU--------
+ 
+  - name: add rules to firewall and bring it up (Ubuntu)
+    tags: ufw,firewall
+    shell: |
+        ufw default deny incoming 
+        ufw default allow outgoing 
+        ufw allow 7001/tcp 
+        ufw limit 7001/tcp 
+    when: ansible_distribution == "Ubuntu" 
+
+  - name: start ufw (Ubuntu)
+    tags: ufw,firewall
+    ufw:
+      state: enabled    
+    when: ansible_distribution == "Ubuntu"
+
+ #------INSTALL TOOLS ALMA--------
+ 
+  - name: install mc (Alma)
+    tags: always
+    yum:
+      name: mc
+      state: present
+    when: ansible_distribution == "AlmaLinux"
+
+  - name: install docker (Alma)
+    tags: always
+    yum:
+      name: podman-docker
+      state: present
+      update_cache: true
+    when: ansible_distribution == "AlmaLinux"
+    
+  - name: install net-tools (Alma)
+    tags: always
+    yum:
+      name: net-tools
+      state: present
+    when: ansible_distribution == "AlmaLinux"
+  
+  - name: install firewalld (Alma)
+    tags: always
+    yum:
+      name: firewalld
+      state: present
+      update_cache: true
+    when: ansible_distribution == "AlmaLinux"
+
+#------ADD RULES TO FIREWALL AND BRING IT UP RHEL--------
+
+  - name: install policy (Alma)
+    yum:
+       name: policycoreutils-python-utils
+       state: present
+    when: ansible_distribution == "AlmaLinux"
+
+  - name: add ssh port (Alma)
+    seport:
+      ports: 7001
+      proto: tcp
+      setype: ssh_port_t
+    when: ansible_distribution == "AlmaLinux"
+
+  - name: renew file context sshd (ALMA) 
+    command: restorecon -R -v /etc/ssh/sshd_config
+    when: ansible_distribution == "AlmaLinux"
+
+  - name: restart sshd service (ALMA)
+    service:
+      name: sshd
+      state: restarted
+    when: ansible_distribution == "AlmaLinux"
+
+  - name: start firewalld (ALMA)
+    tags: firewall
+    service:
+      name: firewalld
+      state: started
+      enabled: yes
+    when: ansible_distribution == "AlmaLinux"  
+  
+  - name: add rules to RHEL firewall and bring it up (ALMA)
+    tags: firewall
+    shell: |
+        firewall-cmd --set-default-zone=drop 
+        firewall-cmd --set-default-zone=public 
+        firewall-cmd --zone=public --add-port=7001/tcp --permanent 
+    when: ansible_distribution == "AlmaLinux"
+
+  - name: restart firewalld (ALMA)
+    tags: firewall
+    service:
+      name: firewalld
+      state: restarted
+      enabled: yes
+    when: ansible_distribution == "AlmaLinux"  
+
+ #------SSHD BACKUP AND COPY NEW CONFIG RHEL--------
+
+  - name: copy new sshd config file (ALMA)
+    copy:
+      src: sshd_config
+      dest: /etc/ssh/sshd_config
+      owner: root
+      group: root
+      mode: 644
+    register: sshdrhel
+
+  - name: restart ssh to apply changes (ALMA)
+    systemd:
+      name: sshd
+      state: restarted
+    when: sshdrhel.changed   
+

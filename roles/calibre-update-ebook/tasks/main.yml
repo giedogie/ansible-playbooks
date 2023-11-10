@@ -1,0 +1,13 @@
+---
+  - name: Copy archive file to target host
+    copy:
+      src: my-ebooks.tar.gz
+      dest: /home/admin/my-ebooks.tar.gz
+  - name: Extract archive file
+    unarchive:
+      src: /home/admin/my-ebooks.tar.gz
+      dest: /CALIBRE/upload/ebooks
+      remote_src: true
+      extra_opts: [--strip-components=1]
+  - name: Run calibredb command
+    command: xvfb-run calibredb add /CALIBRE/upload/ebooks --with-library http://localhost:8080

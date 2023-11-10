@@ -1,0 +1,7 @@
+---
+
+- hosts: calibre-server
+  become: true
+  roles: 
+    #- calibre-server
+    - calibre-update-ebook

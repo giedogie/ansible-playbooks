@@ -1,0 +1,6 @@
+---
+
+- hosts: old_servers
+  become: true
+  roles:
+    - update

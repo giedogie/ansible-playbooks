@@ -1,0 +1,12 @@
+---
+- name: Change time zone
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ubuntu TZ
+      when: ansible_distribution == 'Ubuntu'
+      command: timedatectl set-timezone Europe/Warsaw
+
+    - name: RHEL TZ
+      when: ansible_distribution == 'RedHat'
+      command: timedatectl set-timezone Europe/Warsaw

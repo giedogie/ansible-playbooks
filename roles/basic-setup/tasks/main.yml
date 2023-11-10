@@ -1,0 +1,57 @@
+
+  # UPDATE
+- name: install updates (Ubuntu)
+  tags: always
+  apt:
+    upgrade: dist
+    update_cache: yes
+
+  # INSTALL TOOLS
+
+- name: Install nano, ufw and net-tools
+  apt: name={{ item }} update_cache=yes state=latest
+  loop: [ 'nano', 'ufw', 'net-tools', 'qemu-guest-agent']
+  
+
+  # CHANGE TIME ZONE  
+
+- name: Ustawienie strefy czasowej na Europe/Warsaw
+  timezone:
+    name: Europe/Warsaw 
+    
+  # SSH CONFIG AND RESTART
+    
+- name: copy new sshd config file (Ubuntu)
+  copy:
+    src: sshd_config
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: 644
+  register: sshd
+
+- name: restart ssh to apply changes (Ubuntu)
+  command:
+    cmd: systemctl restart ssh.service 
+  when: sshd.changed
+
+  # ADD UFW RULES
+
+- name: add rules to firewall and bring it up (Ubuntu)
+  tags: ufw,firewall
+  shell: |
+      ufw default deny incoming 
+      ufw default allow outgoing 
+      ufw allow 7001/tcp 
+      ufw limit 7001/tcp  
+
+  # START UFW
+
+- name: start ufw (Ubuntu)
+  tags: ufw,firewall
+  ufw:
+    state: enabled    
+
+
+- name: Reboot the machine
+  reboot:

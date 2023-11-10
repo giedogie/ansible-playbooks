@@ -1,0 +1,74 @@
+
+  # UPDATE
+- name: install updates (Ubuntu)
+  tags: always
+  apt:
+    upgrade: dist
+    update_cache: yes
+
+  # INSTALL TOOLS
+
+- name: Install nano, ufw i net-tools
+  apt: name={{ item }} update_cache=yes state=latest
+  loop: ['qemu-guest-agent', 'nano', 'ufw', 'net-tools', 'syncthing']
+  
+
+  # CHANGE TIME ZONE  
+
+- name: et timezone Europe/Warsaw
+  timezone:
+    name: Europe/Warsaw 
+    
+  # SSH CONFIG AND RESTART
+    
+- name: copy new sshd config file (Ubuntu)
+  copy:
+    src: sshd_config
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: 644
+  register: sshd
+
+- name: restart ssh to apply changes (Ubuntu)
+  command:
+    cmd: systemctl restart ssh.service 
+  when: sshd.changed
+
+  # ADD UFW RULES
+
+- name: add rules to firewall and bring it up (Ubuntu)
+  tags: ufw,firewall
+  shell: |
+      ufw default deny incoming 
+      ufw default allow outgoing 
+      ufw allow 7001/tcp 
+      ufw limit 7001/tcp  
+
+  # START UFW
+
+- name: start ufw (Ubuntu)
+  tags: ufw,firewall
+  ufw:
+    state: enabled    
+  when: ansible_distribution == "Ubuntu"
+
+- name: Reboot the machine
+  reboot:
+
+  # START AND COPY SYNCTHING CONFIG
+- name: start syncthing
+  shell: systemctl start syncthing@neon
+
+- name: copy new syncthing config
+  copy:
+    src: config.xml
+    dest: /home/admin/.config/syncthing/config.xml
+    owner: admin
+    group: admin
+    mode: 755
+
+- name: restart and enable syncthing
+  shell: |
+      systemctl restart syncthing@admin
+      systemctl enable syncthing@admin
