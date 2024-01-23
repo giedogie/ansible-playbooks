@@ -1,0 +1,15 @@
+- name: Manage Packages
+  hosts: server_group
+  become: yes
+  vars:
+    packages:
+      - name: nginx
+        state: present
+      - name: apache2
+        state: absent
+  tasks:
+    - name: Ensure packages are present/absent
+      apt:
+        name: "{{ item.name }}"
+        state: "{{ item.state }}"
+      loop: "{{ packages }}"

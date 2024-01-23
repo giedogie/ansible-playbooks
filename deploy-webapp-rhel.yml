@@ -1,0 +1,30 @@
+- name: Deploy webapp on RHEL system
+  hosts: rhel_servers
+  become: yes
+  vars:
+    doc_root: "/var/www/html"
+    app_file: "index.html"
+
+  tasks:
+    - name: Install Apache
+      yum:
+        name: httpd
+        state: present
+    
+    - name: Copy webapp file
+      copy:
+        src: "/path/to/local/{{ app_file }}"
+        dest: "{{ doc_root }}/{{ app_file }}"
+      notify: restart httpd
+
+    - name: Start and enable apache server
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: restart httpd
+      service:
+        name: httpd
+        state: restarted
